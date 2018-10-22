@@ -1,5 +1,3 @@
-#include "channel.h"
-
 void list(const char* channelName, struct channel* channels, int numChannels)
 {
 	for (struct channel* channel=channels; channel < channels+numChannels; ++channel)

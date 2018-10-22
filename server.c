@@ -5,24 +5,16 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <sys/select.h>
+#include <math.h>
 
-#include "channel.h"
-#include "commands.h"
+//#include "commands.h"
+#include "client.h"
 
 int numChannels = 0;
 struct channel* channels = NULL;
 
-void list(const char* channelName)
-{
-	for (struct channel* channel=channels; channel < channels+numChannels; ++channel)
-		if (strcmp(channel -> name, channelName) == 0)
-		{
-			printf("There are currently %d members.\n", channel -> numClients);
-			return;
-		}
-	
-	printf("There are currently %d channels.\n", numChannels);
-}
+int numClients = 0;
+struct client* clients = NULL;
 
 void exitError(char* str)
 {
@@ -55,16 +47,25 @@ int main(int argc, char** argv)
 
 	while (true)
 	{
-		fd_set rfds = selectOnClients();
+		// Select on client ports and the listener port
+		fd_set rfds;
+		FD_ZERO(&rfds);
+		int maxPort = connectionSocket;
+		for (struct client* client = clients; client < clients+numClients; ++client)
+		{
+			FD_SET(client -> socket, &rfds);
+			maxPort = fmax(client -> socket, maxPort);
+		}
 		FD_SET(connectionSocket, &rfds);
+		select(maxPort, &rfds, NULL, NULL, NULL);
 
 		if (FD_ISSET(connectionSocket, &rfds))
-			acceptClient();
+			acceptClient(&servaddr, clients, );
 		
 		// Loop through clients' ports
 			// If FD_ISSET(client.port, &rfds);
 				// Read command and dispatch on result
 	}
 
-	close(connectionSocket);
+	//close(connectionSocket);
 }
