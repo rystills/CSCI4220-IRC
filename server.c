@@ -60,7 +60,7 @@ int main(int argc, char** argv)
 		select(maxPort, &rfds, NULL, NULL, NULL);
 
 		if (FD_ISSET(connectionSocket, &rfds))
-			acceptClient(&servaddr, clients, );
+			acceptClient(&servaddr, clients, connectionSocket);
 		
 		// Loop through clients' ports
 			// If FD_ISSET(client.port, &rfds);

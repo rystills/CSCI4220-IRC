@@ -1,2 +1,2 @@
 make: server.c
-	gcc -o hw3.out server.c -I.
+	gcc -std=c99 -o hw3.out server.c -I. -lm
