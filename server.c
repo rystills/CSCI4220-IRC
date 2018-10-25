@@ -97,12 +97,18 @@ int main(int argc, char** argv)
 		if (FD_ISSET(connectionSocket, &rfds)) {
 			acceptClient(&servaddr, connectionSocket);
 		}
-		for (struct client* client = cliHead; client != NULL; client = client->next) {
+		for (struct client* client = cliHead; client != NULL;) {
 			printf("%d\n",client->socket);
+			//store client's next now, because we won't be able to access it if client gets freed
+			struct client* oldNext = client->next;
 			if (client->socket != -1 && FD_ISSET(client->socket, &rfds))
 				handleClientMessage(client);
+			//iterate to old next after potential free
+			client = oldNext;
 		}
 	}
+	free(cliHead);
+	free(cliTail);
 
 	//close(connectionSocket);
 }

@@ -50,7 +50,7 @@ void acceptClient(struct sockaddr_in* servaddr, int connection_socket) {
 		cliTail = newCli;
 	}
 	++numClients;
-};
+}
 
 /**
 remove a client, updating the linked list and closing his socket
@@ -64,23 +64,21 @@ void removeClient(struct client* client) {
 	if (client != cliTail && client != cliHead) {
 		client->prev->next = client->next;
 		client->next->prev = client->prev;
-		return;
 	}
 	//special case: client is the only one, so head and tail should both be set to NULL
-	if (client == cliHead && client == cliTail) {
+	else if (client == cliHead && client == cliTail) {
 		cliHead = cliTail = NULL;
-		return;
 	}
 	//special case: client is the head, buth others exist. update next->prev
-	if (client == cliHead) {
+	else if (client == cliHead) {
 		client->next->prev = NULL;
 		cliHead = client->next;
 	}
 
 	//special case: client is the tail, but others exist. update prev->next
-	if (client == cliTail) {
+	else if (client == cliTail) {
 		client->prev->next = NULL;
 		cliTail = client->prev;
 	}
-
-};
+	free(client);
+}
