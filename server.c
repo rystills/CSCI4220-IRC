@@ -13,8 +13,8 @@
 #define BUFFSIZE 2048
 
 int numChannels = 0;
-struct channel* channelHead = NULL;
-struct channel* channelTail = NULL;
+//struct channel* channelHead = NULL;
+//struct channel* channelTail = NULL;
 
 int numClients = 0;
 struct client* cliHead = NULL;
@@ -74,6 +74,9 @@ void handleClientMessage(struct client* sender) {
 
 int main(int argc, char** argv)
 {
+	cliHead = malloc(sizeof(struct client));
+	cliTail = malloc(sizeof(struct client));
+
 	struct sockaddr_in servaddr;
 	int connectionSocket = initializeListenerSocket(&servaddr);
 	

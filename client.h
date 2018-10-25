@@ -31,21 +31,23 @@ accept an incoming connection request from a client
 */
 void acceptClient(struct sockaddr_in* servaddr, int connection_socket) {
 	unsigned int len = sizeof(struct sockaddr_in);
-	struct client newCli = {NULL,-1,NULL,NULL};
-	newCli.socket = accept(connection_socket, (struct sockaddr *) servaddr, &len);
-	if (newCli.socket < 0) {
+	struct client *newCli = NULL;
+	newCli = malloc(sizeof(struct client));
+
+	newCli->socket = accept(connection_socket, (struct sockaddr *) servaddr, &len);
+	if (newCli->socket < 0) {
 		printf("Error: accept() failed");
 		exit(EXIT_FAILURE);
 	}
 	puts("sender connected");
 	if (numClients == 0) {
-		cliHead = &newCli;
-		cliTail = &newCli;
+		cliHead = newCli;
+		cliTail = newCli;
 	}
 	else {
-		cliTail->next = &newCli;
-		newCli.prev = cliTail;
-		cliTail = &newCli;
+		cliTail->next = newCli;
+		newCli->prev = cliTail;
+		cliTail = newCli;
 	}
 	++numClients;
 };
