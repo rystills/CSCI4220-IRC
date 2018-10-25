@@ -10,6 +10,8 @@
 //#include "commands.h"
 #include "client.h"
 
+#define BUFFSIZE 2048
+
 int numChannels = 0;
 struct channel* channelHead = NULL;
 struct channel* channelTail = NULL;
@@ -58,6 +60,18 @@ int initializeListenerSocket(struct sockaddr_in* servaddr)
 	return connectionSocket;
 }
 
+void handleClientMessage(struct client* sender) {
+	char buff[BUFFSIZE];
+	//remove client if we get a read value of 0
+	ssize_t amntRead = read(sender->socket,buff,BUFFSIZE-1);
+	buff[amntRead] = '\0';
+	if (amntRead == 0) {
+		puts("sender disconnected");
+		//printf("%s (socket %d) has disconnected\n", sender->name, sender->socket);
+		removeClient(sender);
+	}
+}
+
 int main(int argc, char** argv)
 {
 	struct sockaddr_in servaddr;
@@ -69,13 +83,11 @@ int main(int argc, char** argv)
 		fd_set rfds;
 		FD_ZERO(&rfds);
 		int maxPort = connectionSocket;
-		for (struct client* client = cliHead; client != NULL && client->next != NULL; client = client->next)
+		for (struct client* client = cliHead; client != NULL; client = client->next)
 		{
-			fflush(stdout);
 			FD_SET(client -> socket, &rfds);
 			maxPort = fmax(client -> socket, maxPort);
 		}
-		fflush(stdout);
 		FD_SET(connectionSocket, &rfds);
 		select(maxPort+1, &rfds, NULL, NULL, NULL);
 
@@ -83,9 +95,9 @@ int main(int argc, char** argv)
 			acceptClient(&servaddr, connectionSocket);
 		}
 		
-		// Loop through clients' ports
-			// If FD_ISSET(client.port, &rfds);
-				// Read command and dispatch on result
+		for (struct client* client = cliHead; client != NULL; client = client->next)
+			if (client->socket != -1 && FD_ISSET(client->socket, &rfds))
+				handleClientMessage(client);
 	}
 
 	//close(connectionSocket);

@@ -1,4 +1,14 @@
+#include <stdio.h>
+#include <arpa/inet.h>
 #include <stdlib.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <sys/select.h>
+#include <stdbool.h>
+#include <string.h>
+#include <time.h>
+#include <sys/types.h>
+#include <stdarg.h>
 
 extern int numChannels;
 extern int numClients;
@@ -10,6 +20,7 @@ struct client
 	char* nickname;
 	int socket;
 	struct client* next;
+	struct client* prev;
 };
 
 /**
@@ -32,11 +43,33 @@ void acceptClient(struct sockaddr_in* servaddr, int connection_socket) {
 	}
 	else {
 		cliTail->next = &newCli;
+		newCli.prev = cliTail;
 		cliTail = &newCli;
 	}
 	++numClients;
 };
 
-void removeClient(struct client* clientList, struct client* client) {
+void removeClient(struct client* client) {
+	close(client->socket);
+	client->socket = -1;
+	--numClients;
+	if (client != cliTail && client != cliHead) {
+		client->prev->next = client->next;
+		client->next->prev = client->prev;
+		return;
+	}
+	if (client == cliHead && client == cliTail) {
+		cliHead = NULL;
+		cliTail = NULL;
+		return;
+	}
+	if (client == cliHead) {
+		client->next->prev = NULL;
+		cliHead = client->next;
+	}
+	if (client == cliTail) {
+		client->prev->next = NULL;
+		cliTail = client->prev;
+	}
 
 };
