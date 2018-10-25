@@ -11,10 +11,12 @@
 #include "client.h"
 
 int numChannels = 0;
-struct channel* channels = NULL;
+struct channel* channelHead = NULL;
+struct channel* channelTail = NULL;
 
 int numClients = 0;
-struct client* clients = NULL;
+struct client* cliHead = NULL;
+struct client* cliTail = NULL;
 
 /**
 display an error message and exit the application
@@ -26,6 +28,11 @@ void errorFailure(const char* msg)
 	exit(EXIT_FAILURE);
 }
 
+/**
+initialize the socket on which we listen for new client connections
+@param servaddr: the socket address of the server used to establish the connection socket
+@returns: our newly created connectionSocket which is actively listen for new connections
+*/
 int initializeListenerSocket(struct sockaddr_in* servaddr)
 {
 	int connectionSocket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
@@ -62,16 +69,18 @@ int main(int argc, char** argv)
 		fd_set rfds;
 		FD_ZERO(&rfds);
 		int maxPort = connectionSocket;
-		for (struct client* client = clients; client < clients+numClients; ++client)
+		for (struct client* client = cliHead; client != NULL && client->next != NULL; client = client->next)
 		{
+			fflush(stdout);
 			FD_SET(client -> socket, &rfds);
 			maxPort = fmax(client -> socket, maxPort);
 		}
+		fflush(stdout);
 		FD_SET(connectionSocket, &rfds);
 		select(maxPort+1, &rfds, NULL, NULL, NULL);
 
 		if (FD_ISSET(connectionSocket, &rfds)) {
-			acceptClient(&servaddr, clients, connectionSocket);
+			acceptClient(&servaddr, connectionSocket);
 		}
 		
 		// Loop through clients' ports
