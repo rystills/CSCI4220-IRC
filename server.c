@@ -16,35 +16,46 @@ struct channel* channels = NULL;
 int numClients = 0;
 struct client* clients = NULL;
 
-void exitError(char* str)
+/**
+display an error message and exit the application
+@param msg: the error message to display
+*/
+void errorFailure(const char* msg)
 {
-	perror(str); 
-	exit(EXIT_FAILURE); 
+	printf("Error: %s\n", msg);
+	exit(EXIT_FAILURE);
+}
+
+int initializeListenerSocket(struct sockaddr_in* servaddr)
+{
+	int connectionSocket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	if (connectionSocket < 0)
+		errorFailure("Socket creation failed");
+	
+	socklen_t s = sizeof(*servaddr);
+	memset(servaddr, 0, s);
+	servaddr->sin_family = AF_INET;
+	servaddr->sin_addr.s_addr = INADDR_ANY;
+	servaddr->sin_port = 0;
+	if (bind(connectionSocket, (const struct sockaddr *) servaddr, s) < 0)
+		errorFailure("Bind failed");
+	
+	//check/get sin_port
+	getsockname(connectionSocket, (struct sockaddr *) servaddr,&s);
+	printf("port is: %d\n", ntohs(servaddr->sin_port));
+	fflush(stdout);
+	
+	//begin listening
+	listen(connectionSocket, 1);
+
+	return connectionSocket;
 }
 
 int main(int argc, char** argv)
 {
-	int connectionSocket = socket(AF_INET, SOCK_DGRAM, 0);
-	if (connectionSocket < 0)
-		exitError("unable to create socket"); 
-	
-	//init server socket
 	struct sockaddr_in servaddr;
-	socklen_t s = sizeof servaddr;
-	memset(&servaddr, 0, s);
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_addr.s_addr = INADDR_ANY;
-	servaddr.sin_port = 69;
+	int connectionSocket = initializeListenerSocket(&servaddr);
 	
-	//bind the socket with the server address
-	if (bind(connectionSocket, (const struct sockaddr *) &servaddr, s) < 0)
-		exitError("unable to bind socket");
-
-	//check/get sin_port
-	getsockname(connectionSocket, (struct sockaddr *) &servaddr,&s);
-	printf("port is: %d\n", ntohs(servaddr.sin_port));
-	fflush(stdout);
-
 	while (true)
 	{
 		// Select on client ports and the listener port
@@ -57,10 +68,11 @@ int main(int argc, char** argv)
 			maxPort = fmax(client -> socket, maxPort);
 		}
 		FD_SET(connectionSocket, &rfds);
-		select(maxPort, &rfds, NULL, NULL, NULL);
+		select(maxPort+1, &rfds, NULL, NULL, NULL);
 
-		if (FD_ISSET(connectionSocket, &rfds))
+		if (FD_ISSET(connectionSocket, &rfds)) {
 			acceptClient(&servaddr, clients, connectionSocket);
+		}
 		
 		// Loop through clients' ports
 			// If FD_ISSET(client.port, &rfds);
