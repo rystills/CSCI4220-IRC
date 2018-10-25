@@ -94,10 +94,11 @@ int main(int argc, char** argv)
 		if (FD_ISSET(connectionSocket, &rfds)) {
 			acceptClient(&servaddr, connectionSocket);
 		}
-		
-		for (struct client* client = cliHead; client != NULL; client = client->next)
+		for (struct client* client = cliHead; client != NULL; client = client->next) {
+			printf("%d\n",client->socket);
 			if (client->socket != -1 && FD_ISSET(client->socket, &rfds))
 				handleClientMessage(client);
+		}
 	}
 
 	//close(connectionSocket);
