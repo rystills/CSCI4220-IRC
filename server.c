@@ -74,9 +74,6 @@ void handleClientMessage(struct client* sender) {
 
 int main(int argc, char** argv)
 {
-	cliHead = malloc(sizeof(struct client));
-	cliTail = malloc(sizeof(struct client));
-
 	struct sockaddr_in servaddr;
 	int connectionSocket = initializeListenerSocket(&servaddr);
 	
@@ -107,8 +104,6 @@ int main(int argc, char** argv)
 			client = oldNext;
 		}
 	}
-	free(cliHead);
-	free(cliTail);
 
 	//close(connectionSocket);
 }
