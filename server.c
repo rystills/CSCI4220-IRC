@@ -158,8 +158,8 @@ void handleClientMessage(struct node* senderNode) {
 					struct client* client = node->data;
 					sprintf(outBuff+strlen(outBuff),"* %s\n",client->nickname);
 				}
-				sendMessage(sender,outBuff);
-				return;
+				return sendMessage(sender,outBuff);
+				
 			}
 		}
 		//no valid channel was specified, so list channels
@@ -168,21 +168,20 @@ void handleClientMessage(struct node* senderNode) {
 			struct channel* channel = node->data;
 			sprintf(outBuff+strlen(outBuff),"* %s\n",channel->name);
 		}
-		sendMessage(sender,outBuff);		
-		return;
+		return sendMessage(sender,outBuff);	
 	}
 
 	//handle JOIN command
 	if (amntRead >= 5 && strncmp(buff,"JOIN ",5) == 0) {
 		//check that the channel name is a valid string starting with #
 		if (buff[5] != '#') {
-			return sendMessage(sender,"Error: channel name must begin with '#'\n");
+			return sendMessage(sender,"Error: channel name must begin with '#'.\n");
 		}
 		if (!checkValidString(6,buff,amntRead,sender,true)) return;
 		struct node* channelNode = joinChannel(sender,buff+6);
 		//if we got a return value of NULL, that means we're already present in the channel
 		if (channelNode == NULL) {
-			return sendMessage(sender, "Error: user already present in specified channel\n");
+			return sendMessage(sender, "Error: user already present in specified channel.\n");
 		}
 		struct channel* channel = (struct channel*)(channelNode->data);
 		//say hello to everyone in the channel
@@ -197,17 +196,41 @@ void handleClientMessage(struct node* senderNode) {
 
 	//handle PART command
 	if (amntRead >= 4 && strncmp(buff,"PART",4) == 0) {
+		if (amntRead > 4 && buff[4] != ' ') {
+			return sendMessage(sender,"Error: command not recognized. Did you mean PART?\n");
+		}
 		char outBuff[BUFFSIZE];
-		//check if a channel was specified
+		//check if a valid channel was specified
 		if (amntRead >= 6 && buff[5] == '#' && checkValidString(6,buff,amntRead,sender,false)) {
 			//valid channel name was specified; check if the channel with that name exists
 			struct channel* channel = findChannel(buff+6);
-			if (channel == NULL) {
-				return sendMessage(sender,"Error: no channel with the specified name was found\n");
+			if (channel != NULL) {
+				//channel matching specified name detected; check if we are present in it
+				struct node* channelCli = clientInChannel(channel,sender);
+				if (channelCli != NULL) {
+					//we are in the channel; remove us and tell everyone
+					sprintf(outBuff,"#%s> %s has left the channel.\n",channel->name,sender->nickname);
+					sendToChannelMembers(outBuff,channel,NULL);
+					ll_remove(channel->clients,channelCli);
+					return;
+				}
+				sprintf(outBuff,"You are not currently in #%s.\n",channel->name);
+				return sendMessage(sender,outBuff);
 			}
+		}
+		//make sure we found a channel to remove the user from if we specified an argument to PART
+		if (amntRead > 4) {
+			return sendMessage(sender,"Error: invalid channel specified.\n");
+		}
+		//no argument was specified, so remove user from all channels
+		for (struct node* node = channels->head; node != NULL; node = node->next) {
+			struct channel* channel = node->data;
 			struct node* channelCli = clientInChannel(channel,sender);
-			if (channelCli == NULL) {
-				return sendMessage(sender,"Error: user is not a member of the specified channel\n");
+			if (channelCli != NULL) {
+				//we are in the channel; remove us and tell everyone
+				sprintf(outBuff,"#%s> %s has left the channel.\n",channel->name,sender->nickname);
+				sendToChannelMembers(outBuff,channel,NULL);
+				ll_remove(channel->clients,channelCli);
 			}
 		}
 		return;
