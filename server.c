@@ -143,10 +143,12 @@ void handleClientMessage(struct node* senderNode) {
 
 	//handle LIST command
 	if (amntRead >= 4 && strncmp(buff,"LIST",4) == 0) {
+		if (amntRead > 4 && buff[4] != ' ') {
+			return sendMessage(sender,"Error: command not recognized. Did you mean LIST?\n");
+		}
 		char outBuff[BUFFSIZE];
 		//check if a valid channel was specified
-		//TODO: as per the spec, 'LIST' followed by any amount of garbage simply lists channels. Maybe this should error out instead? ie. "LISTFBRTS" is considered valid
-		if (amntRead >= 6 && buff[4] == ' ' && buff[5] == '#' && checkValidString(6,buff,amntRead,sender,false)) {
+		if (amntRead >= 6 && buff[5] == '#' && checkValidString(6,buff,amntRead,sender,false)) {
 			//valid channel name was specified; check if the channel with that name exists
 			struct channel* foundChannel = findChannel(buff+6);
 			if (foundChannel != NULL) {
