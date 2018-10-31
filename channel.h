@@ -26,17 +26,17 @@ struct channel
 check if the specified client is in the specified channel
 @param channel: the channel to check in
 @param inClient: the client to check for presence in the channel
-@returns: whether client is found in inChannel
+@returns: the client that is found in inChannel, or NULL if the client is not found
 */ 
-bool clientInChannel(struct channel* channel, struct client* inClient) {
+struct node* clientInChannel(struct channel* channel, struct client* inClient) {
 	struct linkedList* clients = channel->clients;
 	for (struct node* node = clients->head; node != NULL; node = node->next) {
 		struct client* client = node->data;
 		if (client->nickname == inClient->nickname) {
-			return true;
+			return node;
 		}
 	}
-	return false;
+	return NULL;
 }
 
 /**
@@ -50,7 +50,7 @@ struct node* joinChannel(struct client* client, char* name) {
 		struct channel* channel = node->data;
 		if (strcmp(channel->name,name) == 0) {
 			//check if client is already in channel
-			if (clientInChannel(channel,client)) {
+			if (clientInChannel(channel,client) != NULL) {
 				return NULL;
 			}
 			ll_add(channel->clients,client);

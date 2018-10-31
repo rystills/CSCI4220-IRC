@@ -212,7 +212,15 @@ void handleClientMessage(struct node* senderNode) {
 
 	//handle QUIT command
 	if (amntRead >= 4 && strncmp(buff,"QUIT",4) == 0) {
-		//TODO: remove the user from all channels
+		//remove user from all channels
+		for (struct node* node = channels->head; node != NULL; node = node->next) {
+			struct channel* channel = node->data;
+			struct node* channelCli = clientInChannel(channel,sender);
+			if (channelCli != NULL) {
+				ll_remove(channel->clients,channelCli);
+			}
+		}
+		
 		removeClient(senderNode);
 		return;
 	}
