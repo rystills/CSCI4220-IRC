@@ -40,7 +40,7 @@ struct node* acceptClient(struct sockaddr_in* servaddr, int connection_socket) {
 		exit(EXIT_FAILURE);
 	}
 	puts("sender connected");
-	return ll_add(clients,(void*)newCli);
+	return ll_add(clients,newCli);
 }
 
 /**

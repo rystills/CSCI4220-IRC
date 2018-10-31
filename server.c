@@ -155,6 +155,7 @@ void handleClientMessage(struct node* senderNode) {
 		}
 		//check that the username is a valid string
 		if (!checkValidString(5,buff,amntRead,sender)) return;
+		//check that username isn't in use by someone else
 		if (findClientWithName(buff+5) != NULL) {
 			return sendMessage(sender,"Error: username is already taken by someone else\n");
 		}
@@ -180,8 +181,11 @@ void handleClientMessage(struct node* senderNode) {
 			return sendMessage(sender,"Error: channel name must begin with '#'\n");
 		}
 		if (!checkValidString(6,buff,amntRead,sender)) return;
-		//check if the channel exists
 		struct node* channelNode = joinChannel(sender,buff+6);
+		//if we got a return value of NULL, that means we're already present in the channel
+		if (channelNode == NULL) {
+			return sendMessage(sender, "Error: user already present in specified channel\n");
+		}
 		//TODO: say hello to everyone in the channel (excluding ourself)
 		return;
 	}
