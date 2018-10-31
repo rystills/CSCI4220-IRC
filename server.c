@@ -144,8 +144,9 @@ void handleClientMessage(struct node* senderNode) {
 	//handle LIST command
 	if (amntRead >= 4 && strncmp(buff,"LIST",4) == 0) {
 		char outBuff[BUFFSIZE];
-		//check if a channel was specified
-		if (amntRead >= 6 && buff[5] == '#' && checkValidString(6,buff,amntRead,sender,false)) {
+		//check if a valid channel was specified
+		//TODO: as per the spec, 'LIST' followed by any amount of garbage simply lists channels. Maybe this should error out instead? ie. "LISTFBRTS" is considered valid
+		if (amntRead >= 6 && buff[4] == ' ' && buff[5] == '#' && checkValidString(6,buff,amntRead,sender,false)) {
 			//valid channel name was specified; check if the channel with that name exists
 			struct channel* foundChannel = findChannel(buff+6);
 			if (foundChannel != NULL) {
@@ -193,7 +194,20 @@ void handleClientMessage(struct node* senderNode) {
 	}
 
 	//handle PART command
-	if (amntRead >= 5 && strncmp(buff,"PART ",5) == 0) {
+	if (amntRead >= 4 && strncmp(buff,"PART",4) == 0) {
+		char outBuff[BUFFSIZE];
+		//check if a channel was specified
+		if (amntRead >= 6 && buff[5] == '#' && checkValidString(6,buff,amntRead,sender,false)) {
+			//valid channel name was specified; check if the channel with that name exists
+			struct channel* channel = findChannel(buff+6);
+			if (channel == NULL) {
+				return sendMessage(sender,"Error: no channel with the specified name was found\n");
+			}
+			struct node* channelCli = clientInChannel(channel,sender);
+			if (channelCli == NULL) {
+				return sendMessage(sender,"Error: user is not a member of the specified channel\n");
+			}
+		}
 		return;
 	}
 
@@ -213,7 +227,7 @@ void handleClientMessage(struct node* senderNode) {
 	}
 
 	//handle QUIT command
-	if (amntRead >= 4 && strncmp(buff,"QUIT",4) == 0) {
+	if (amntRead == 4 && strncmp(buff,"QUIT",4) == 0) {
 		//remove user from all channels
 		for (struct node* node = channels->head; node != NULL; node = node->next) {
 			struct channel* channel = node->data;
