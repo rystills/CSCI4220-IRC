@@ -280,9 +280,10 @@ void handleClientMessage(struct node* senderNode) {
 
 int main(int argc, char** argv)
 {
+	//set password to argv[1] if valid expression
 	if (argc > 1) {
 		int argLen = strlen(argv[1]);
-		if (argLen > 11 && checkValidString(11,argv[1],argLen,NULL,false)) {
+		if (argLen > 11 && strncmp(argv[1],"--opt-pass=",11) == 0 && checkValidString(11,argv[1],argLen,NULL,false)) {
 			password = argv[1]+11;
 		}
 	}
