@@ -35,6 +35,7 @@ void acceptClient(struct sockaddr_in* servaddr, int connection_socket) {
 	newCli = malloc(sizeof(struct client));
 	newCli->next = NULL;
 	newCli->prev = NULL;
+	newCli->nickname = NULL;
 
 	newCli->socket = accept(connection_socket, (struct sockaddr *) servaddr, &len);
 	if (newCli->socket < 0) {
@@ -83,5 +84,9 @@ void removeClient(struct client* client) {
 		cliTail = client->prev;
 	}
 	printf("%p,%p\n",cliHead,cliTail);
+	//free the client's nickname if it has been set
+	if (client->nickname != NULL) {
+		free(client->nickname);
+	}
 	free(client);
 }

@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <sys/select.h>
 #include <math.h>
+#include <ctype.h>
 
 //#include "commands.h"
 #include "client.h"
@@ -70,6 +71,41 @@ void handleClientMessage(struct client* sender) {
 		//printf("%s (socket %d) has disconnected\n", sender->name, sender->socket);
 		removeClient(sender);
 	}
+	//strip trailing newline when present
+	if (buff[amntRead-1] == '\n') {
+		buff[amntRead-1] = '\0';
+		--amntRead;
+	}
+	//handle USER command
+	if (amntRead >= 5 && buff[0] == 'U' && buff[1] == 'S' && buff[2] == 'E' && buff[3] == 'R' && buff[4] == ' ') {
+		//check username is a valid length
+		if (amntRead > 25) {
+			fprintf(stderr,"Error: username too long. Max username length = 20 chars\n");
+			return;
+		}
+		//check username isn't already set
+		if (sender->nickname != NULL) {
+			fprintf(stderr,"Error: username has already been set for this user\n");
+			return;
+		}
+		//check username starts with an alpha char
+		if (!isalpha(buff[5])) {
+			fprintf(stderr,"Error: username must start with an alphabetic character\n");
+			return;
+		}
+		//check username contains only alpha, num, and space
+		for (int i = 6; i < amntRead; ++i) {
+			if (!(isalnum(buff[i]) || buff[i] == ' ')) {
+				fprintf(stderr,"Error: username may only contain alphanumeric characters and spaces\n");
+				return;		
+			}
+		}
+		//username is legal! set it
+		sender->nickname = malloc(amntRead-5);
+		strcpy(sender->nickname,buff+5);
+		puts(sender->nickname);
+	}
+
 }
 
 int main(int argc, char** argv)
