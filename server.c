@@ -217,7 +217,23 @@ void handleClientMessage(struct node* senderNode) {
 		if (channelNode == NULL) {
 			return sendMessage(sender, "Error: user already present in specified channel\n");
 		}
-		//TODO: say hello to everyone in the channel (excluding ourself)
+		struct channel* channel = (struct channel*)(channelNode->data);
+		//say hello to everyone in the channel
+		char outBuff[BUFFSIZE];
+		sprintf(outBuff,"#%s",channel->name);
+		sprintf(outBuff+strlen(outBuff),"> ");
+		sprintf(outBuff+strlen(outBuff),"%s",sender->nickname);
+		sprintf(outBuff+strlen(outBuff)," joined the channel.\n");
+		for (struct node* node = channel->clients->head; node != NULL; node = node->next) {
+			struct client* client = node->data;
+			if (client == sender) continue;
+			sendMessage(client, outBuff);
+		}
+		sprintf(outBuff,"Joined channel ");
+		sprintf(outBuff+strlen(outBuff),"#%s",channel->name);
+		sprintf(outBuff+strlen(outBuff),"\n");
+		sendMessage(sender,outBuff);
+
 		return;
 	}
 
