@@ -150,29 +150,21 @@ void handleClientMessage(struct node* senderNode) {
 			struct channel* foundChannel = findChannel(buff+6);
 			if (foundChannel != NULL) {
 				//channel matching specified name detected; list contents of that channel instead of channel list
-				sprintf(outBuff,"There are currently ");
-				sprintf(outBuff+strlen(outBuff),"%d",foundChannel->clients->numElements);
-				sprintf(outBuff+strlen(outBuff)," members.");
+				sprintf(outBuff,"There are currently %d members.\n",foundChannel->clients->numElements);
 				for (struct node* node = foundChannel->clients->head; node != NULL; node = node->next) {
 					struct client* client = node->data;
-					sprintf(outBuff+strlen(outBuff),"\n* ");
-					sprintf(outBuff+strlen(outBuff),"%s",client->nickname);
+					sprintf(outBuff+strlen(outBuff),"* %s\n",client->nickname);
 				}
-				sprintf(outBuff+strlen(outBuff),"\n");
 				sendMessage(sender,outBuff);
 				return;
 			}
 		}
 		//no valid channel was specified, so list channels
-		sprintf(outBuff,"There are currently ");
-		sprintf(outBuff+strlen(outBuff),"%d",channels->numElements);
-		sprintf(outBuff+strlen(outBuff)," channels.");
+		sprintf(outBuff,"There are currently %d channels.\n",channels->numElements);
 		for (struct node* node = channels->head; node != NULL; node = node->next) {
 			struct channel* channel = node->data;
-			sprintf(outBuff+strlen(outBuff),"\n* ");
-			sprintf(outBuff+strlen(outBuff),"%s",channel->name);
+			sprintf(outBuff+strlen(outBuff),"* %s\n",channel->name);
 		}
-		sprintf(outBuff+strlen(outBuff),"\n");
 		sendMessage(sender,outBuff);		
 		return;
 	}
@@ -192,16 +184,11 @@ void handleClientMessage(struct node* senderNode) {
 		struct channel* channel = (struct channel*)(channelNode->data);
 		//say hello to everyone in the channel
 		char outBuff[BUFFSIZE];
-		sprintf(outBuff,"#%s> ",channel->name);
-		sprintf(outBuff+strlen(outBuff),"%s",sender->nickname);
-		sprintf(outBuff+strlen(outBuff)," joined the channel.\n");
+		sprintf(outBuff,"#%s> %s joined the channel.\n",channel->name,sender->nickname);
 		sendToChannelMembers(outBuff,channel,sender);
 		//let the connected client know that he joined successfully
-		sprintf(outBuff,"Joined channel ");
-		sprintf(outBuff+strlen(outBuff),"#%s",channel->name);
-		sprintf(outBuff+strlen(outBuff),"\n");
+		sprintf(outBuff,"Joined channel #%s\n",channel->name);
 		sendMessage(sender,outBuff);
-
 		return;
 	}
 
@@ -236,9 +223,7 @@ void handleClientMessage(struct node* senderNode) {
 				//inform all channel members that we've left
 				//TODO: the hw pdf doesn't say we should inform everyone that we left the channel if it happened via QUIT, but this makes the most sense
 				char outBuff[BUFFSIZE];
-				sprintf(outBuff,"#%s> ",channel->name);
-				sprintf(outBuff+strlen(outBuff),"%s",sender->nickname);
-				sprintf(outBuff+strlen(outBuff)," has left the channel.\n");
+				sprintf(outBuff,"#%s> %s has left the channel.\n",channel->name,sender->nickname);
 				sendToChannelMembers(outBuff,channel,sender);
 			}
 		}
