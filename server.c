@@ -214,9 +214,9 @@ void handleClientMessage(struct node* senderNode) {
 					ll_remove(channel->clients,channelCli);
 					return;
 				}
-				sprintf(outBuff,"You are not currently in #%s.\n",channel->name);
-				return sendMessage(sender,outBuff);
 			}
+			sprintf(outBuff,"You are not currently in #%s.\n",buff+6);
+			return sendMessage(sender,outBuff);
 		}
 		//make sure we found a channel to remove the user from if we specified an argument to PART
 		if (amntRead > 4) {
