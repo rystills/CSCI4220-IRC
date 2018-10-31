@@ -55,6 +55,20 @@ struct channel* findChannel(char* name) {
 }
 
 /**
+send a message to all members of a channel, optionally ignoring one member
+@param msg: message to send
+@param channel: channel on which to send the message
+@param ignoreMe: client who should not receive the message (typically the sender)
+*/
+void sendToChannelMembers(char* msg, struct channel* channel, struct client* ignoreMe) {
+	for (struct node* node = channel->clients->head; node != NULL; node = node->next) {
+		struct client* client = node->data;
+		if (client == ignoreMe) continue;
+		send(client->socket, msg, strlen(msg), 0);
+	}
+}
+
+/**
 add the specified client node to the channel with the specific name
 @param client: the client we wish to add to the channel
 @param name: the name of the channel to which we wish to add the client

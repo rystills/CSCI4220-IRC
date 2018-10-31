@@ -220,15 +220,11 @@ void handleClientMessage(struct node* senderNode) {
 		struct channel* channel = (struct channel*)(channelNode->data);
 		//say hello to everyone in the channel
 		char outBuff[BUFFSIZE];
-		sprintf(outBuff,"#%s",channel->name);
-		sprintf(outBuff+strlen(outBuff),"> ");
+		sprintf(outBuff,"#%s> ",channel->name);
 		sprintf(outBuff+strlen(outBuff),"%s",sender->nickname);
 		sprintf(outBuff+strlen(outBuff)," joined the channel.\n");
-		for (struct node* node = channel->clients->head; node != NULL; node = node->next) {
-			struct client* client = node->data;
-			if (client == sender) continue;
-			sendMessage(client, outBuff);
-		}
+		sendToChannelMembers(outBuff,channel,sender);
+		//let the connected client know that he joined successfully
 		sprintf(outBuff,"Joined channel ");
 		sprintf(outBuff+strlen(outBuff),"#%s",channel->name);
 		sprintf(outBuff+strlen(outBuff),"\n");
@@ -265,6 +261,13 @@ void handleClientMessage(struct node* senderNode) {
 			struct node* channelCli = clientInChannel(channel,sender);
 			if (channelCli != NULL) {
 				ll_remove(channel->clients,channelCli);
+				//inform all channel members that we've left
+				//TODO: the hw pdf doesn't say we should inform everyone that we left the channel if it happened via QUIT, but this makes the most sense
+				char outBuff[BUFFSIZE];
+				sprintf(outBuff,"#%s> ",channel->name);
+				sprintf(outBuff+strlen(outBuff),"%s",sender->nickname);
+				sprintf(outBuff+strlen(outBuff)," has left the channel.\n");
+				sendToChannelMembers(outBuff,channel,sender);
 			}
 		}
 		
