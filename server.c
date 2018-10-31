@@ -91,7 +91,7 @@ void handleClientMessage(struct client* sender) {
 		--amntRead;
 	}
 	//handle USER command
-	if (amntRead >= 5 && buff[0] == 'U' && buff[1] == 'S' && buff[2] == 'E' && buff[3] == 'R' && buff[4] == ' ') {
+	if (amntRead >= 5 && strncmp(buff,"USER ",5) == 0) {
 		//check username is a valid length
 		if (amntRead > 25) {
 			return sendError(sender,"Error: username too long. Max username length = 20 chars\n");
@@ -117,7 +117,42 @@ void handleClientMessage(struct client* sender) {
 	}
 
 	//handle LIST command
-	
+	if (amntRead >= 5 && strncmp(buff,"LIST ",5) == 0) {
+		return;
+	}
+
+	//handle JOIN command
+	if (amntRead >= 5 && strncmp(buff,"JOIN ",5) == 0) {
+		return;
+	}
+
+	//handle PART command
+	if (amntRead >= 5 && strncmp(buff,"PART ",5) == 0) {
+		return;
+	}
+
+	//handle OPERATOR command
+	if (amntRead >= 9 && strncmp(buff,"OPERATOR ",9) == 0) {
+		return;
+	}
+
+	//handle KICK command
+	if (amntRead >= 5 && strncmp(buff,"KICK ",5) == 0) {
+		return;
+	}
+
+	//handle PRIVMSG command
+	if (amntRead >= 8 && strncmp(buff,"PRIVMSG ",8) == 0) {
+		return;
+	}
+
+	//handle QUIT command
+	if (amntRead >= 5 && strncmp(buff,"QUIT ",5) == 0) {
+		return;
+	}
+
+	//unrecognized command
+	sendError(sender, "Error: unrecognized command");
 
 }
 
