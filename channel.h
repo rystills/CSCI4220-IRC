@@ -32,8 +32,23 @@ struct node* clientInChannel(struct channel* channel, struct client* inClient) {
 	struct linkedList* clients = channel->clients;
 	for (struct node* node = clients->head; node != NULL; node = node->next) {
 		struct client* client = node->data;
-		if (client->nickname == inClient->nickname) {
+		if (client == inClient) {
 			return node;
+		}
+	}
+	return NULL;
+}
+
+/**
+find the channel with the specified name, if it exists
+@param name: the name of the channel we wish to find
+@returns: the channel with the specified name, or NULL if no such channel is found
+*/
+struct channel* findChannel(char* name) {
+	for (struct node* node = channels->head; node != NULL; node = node->next) {
+		struct channel* channel = node->data;
+		if (strcmp(channel->name,name) == 0) {
+			return channel;
 		}
 	}
 	return NULL;

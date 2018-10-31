@@ -80,12 +80,12 @@ check whether or not the specified string matches our requriements (20 character
 bool checkValidString(int sLoc, char* buff, int amntRead, struct client* sender, bool shouldNotifySender) {
 	//check string is a valid length
 	if (amntRead > 20+sLoc) {
-		sendMessage(sender,"Error: provided string too long. Max length = 20 chars\n");
+		if (shouldNotifySender) sendMessage(sender,"Error: provided string too long. Max length = 20 chars\n");
 		return false;
 	}
 	//check string starts with an alpha char
 	if (!isalpha(buff[sLoc])) {
-		sendMessage(sender,"Error: provided string must start with an alphabetic character\n");
+		if (shouldNotifySender) sendMessage(sender,"Error: provided string must start with an alphabetic character\n");
 		return false;
 	}
 	//check string contains only alpha, num, and space
@@ -175,8 +175,21 @@ void handleClientMessage(struct node* senderNode) {
 		//check if a channel was specified
 		if (amntRead >= 6 && buff[5] == '#' && checkValidString(6,buff,amntRead,sender,false)) {
 			//valid channel name was specified; check if the channel with that name exists
-			//TODO: channel matching specified name detected; list contents of channel instead
-			return;
+			struct channel* foundChannel = findChannel(buff+6);
+			if (foundChannel != NULL) {
+				//channel matching specified name detected; list contents of that channel instead of channel list
+				sprintf(outBuff,"There are currently ");
+				sprintf(outBuff+strlen(outBuff),"%d",foundChannel->clients->numElements);
+				sprintf(outBuff+strlen(outBuff)," members.");
+				for (struct node* node = foundChannel->clients->head; node != NULL; node = node->next) {
+					struct client* client = node->data;
+					sprintf(outBuff+strlen(outBuff),"\n* ");
+					sprintf(outBuff+strlen(outBuff),"%s",client->nickname);
+				}
+				sprintf(outBuff+strlen(outBuff),"\n");
+				sendMessage(sender,outBuff);
+				return;
+			}
 		}
 		//no valid channel was specified, so list channels
 		sprintf(outBuff,"There are currently ");
