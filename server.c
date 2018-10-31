@@ -238,9 +238,15 @@ void handleClientMessage(struct node* senderNode) {
 	}
 
 	//handle OPERATOR command
-	if (amntRead >= 9 && strncmp(buff,"OPERATOR ",9) == 0) {
-		
-		return;
+	if (amntRead >= 9 && strncmp(buff,"OPERATOR ",5) == 0) {
+		//check that the password is a valid string
+		if (!checkValidString(9,buff,amntRead,sender,true)) return;
+		//check if there is a password and the password is correct
+		if (password[0] != '\0' && strcmp(buff+9,password) == 0) {
+			sender->isOperator = true;
+			return sendMessage(sender,"OPERATOR status bestowed.\n");
+		}
+		return sendMessage(sender,"Invalid OPERATOR command.\n");
 	}
 
 	//handle KICK command
