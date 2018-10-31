@@ -97,5 +97,4 @@ void ll_remove(struct linkedList* list, struct node* node) {
 	list->numElements--;
 	free(node);
 }
-
 #endif

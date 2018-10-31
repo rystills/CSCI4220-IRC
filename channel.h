@@ -95,5 +95,4 @@ struct node* joinChannel(struct client* client, char* name) {
 	ll_add(newChannel->clients,client);
 	return ll_add(channels,newChannel);
 }
-
 #endif

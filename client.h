@@ -20,6 +20,7 @@ struct client
 {
 	char* nickname;
 	int socket;
+	bool isOperator;
 };
 
 /**
@@ -63,6 +64,7 @@ struct node* acceptClient(struct sockaddr_in* servaddr, int connection_socket) {
 	struct client *newCli = NULL;
 	newCli = malloc(sizeof(struct client));
 	newCli->nickname = NULL;
+	newCli->isOperator = false;
 	newCli->socket = accept(connection_socket, (struct sockaddr *) servaddr, &len);
 	if (newCli->socket < 0) {
 		printf("Error: accept() failed");

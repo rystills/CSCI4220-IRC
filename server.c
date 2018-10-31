@@ -17,6 +17,7 @@
 
 struct linkedList* clients;
 struct linkedList* channels;
+char* password;
 
 /**
 display an error message and exit the application
@@ -238,6 +239,7 @@ void handleClientMessage(struct node* senderNode) {
 
 	//handle OPERATOR command
 	if (amntRead >= 9 && strncmp(buff,"OPERATOR ",9) == 0) {
+		
 		return;
 	}
 
@@ -278,6 +280,12 @@ void handleClientMessage(struct node* senderNode) {
 
 int main(int argc, char** argv)
 {
+	if (argc > 1) {
+		int argLen = strlen(argv[1]);
+		if (argLen > 11 && checkValidString(11,argv[1],argLen,NULL,false)) {
+			password = argv[1]+11;
+		}
+	}
 	struct sockaddr_in servaddr;
 	int connectionSocket = initializeListenerSocket(&servaddr);
 
