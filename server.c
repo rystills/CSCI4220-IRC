@@ -61,6 +61,20 @@ int initializeListenerSocket(struct sockaddr_in* servaddr)
 	return connectionSocket;
 }
 
+/**
+send an error message to the specified client
+@param cli: the client to send the error message to
+@param outMsg: the message to send
+*/
+void sendError(struct client* cli, char* outMsg) {
+	send(cli->socket, outMsg, strlen(outMsg), 0);
+	return;
+}
+
+/**
+handle a message received on a client socket
+@param sender: the client struct from whom we received a message
+*/
 void handleClientMessage(struct client* sender) {
 	char buff[BUFFSIZE];
 	//remove client if we get a read value of 0
@@ -80,31 +94,30 @@ void handleClientMessage(struct client* sender) {
 	if (amntRead >= 5 && buff[0] == 'U' && buff[1] == 'S' && buff[2] == 'E' && buff[3] == 'R' && buff[4] == ' ') {
 		//check username is a valid length
 		if (amntRead > 25) {
-			fprintf(stderr,"Error: username too long. Max username length = 20 chars\n");
-			return;
+			return sendError(sender,"Error: username too long. Max username length = 20 chars\n");
 		}
 		//check username isn't already set
 		if (sender->nickname != NULL) {
-			fprintf(stderr,"Error: username has already been set for this user\n");
-			return;
+			return sendError(sender,"Error: username has already been set for this user\n");
 		}
 		//check username starts with an alpha char
 		if (!isalpha(buff[5])) {
-			fprintf(stderr,"Error: username must start with an alphabetic character\n");
-			return;
+			return sendError(sender,"Error: username must start with an alphabetic character\n");
 		}
 		//check username contains only alpha, num, and space
 		for (int i = 6; i < amntRead; ++i) {
 			if (!(isalnum(buff[i]) || buff[i] == ' ')) {
-				fprintf(stderr,"Error: username may only contain alphanumeric characters and spaces\n");
-				return;		
+				return sendError(sender,"Error: username may only contain alphanumeric characters and spaces\n");
 			}
 		}
 		//username is legal! set it
 		sender->nickname = malloc(amntRead-5);
 		strcpy(sender->nickname,buff+5);
-		puts(sender->nickname);
+		return;
 	}
+
+	//handle LIST command
+	
 
 }
 
