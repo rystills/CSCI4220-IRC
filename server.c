@@ -8,18 +8,15 @@
 #include <math.h>
 #include <ctype.h>
 
+#include "linkedList.h"
 //#include "commands.h"
 #include "client.h"
 
 #define BUFFSIZE 2048
 
 int numChannels = 0;
-//struct channel* channelHead = NULL;
-//struct channel* channelTail = NULL;
-
-int numClients = 0;
-struct client* cliHead = NULL;
-struct client* cliTail = NULL;
+struct linkedList* clients;
+struct linkedList* channels;
 
 /**
 display an error message and exit the application
@@ -62,20 +59,22 @@ int initializeListenerSocket(struct sockaddr_in* servaddr)
 }
 
 /**
-send an error message to the specified client
-@param cli: the client to send the error message to
+send a message to the specified client
+@param cli: the client to send the message to
 @param outMsg: the message to send
 */
-void sendError(struct client* cli, char* outMsg) {
+void sendMessage(struct client* cli, char* outMsg) {
 	send(cli->socket, outMsg, strlen(outMsg), 0);
 	return;
 }
 
 /**
 handle a message received on a client socket
-@param sender: the client struct from whom we received a message
+@param senderNode: the node containing a reference to the client from whom we received a message
 */
-void handleClientMessage(struct client* sender) {
+void handleClientMessage(struct node* senderNode) {
+	//dereference the client pointer from our clients node first thing
+	struct client* sender = (struct client*)(senderNode->data);
 	char buff[BUFFSIZE];
 	//remove client if we get a read value of 0
 	ssize_t amntRead = read(sender->socket,buff,BUFFSIZE-1);
@@ -83,7 +82,7 @@ void handleClientMessage(struct client* sender) {
 	if (amntRead == 0) {
 		puts("sender disconnected");
 		//printf("%s (socket %d) has disconnected\n", sender->name, sender->socket);
-		removeClient(sender);
+		return removeClient(senderNode);
 	}
 	//strip trailing newline when present
 	if (buff[amntRead-1] == '\n') {
@@ -94,26 +93,28 @@ void handleClientMessage(struct client* sender) {
 	if (amntRead >= 5 && strncmp(buff,"USER ",5) == 0) {
 		//check username is a valid length
 		if (amntRead > 25) {
-			return sendError(sender,"Error: username too long. Max username length = 20 chars\n");
+			return sendMessage(sender,"Error: username too long. Max username length = 20 chars\n");
 		}
 		//check username isn't already set
 		if (sender->nickname != NULL) {
-			return sendError(sender,"Error: username has already been set for this user\n");
+			return sendMessage(sender,"Error: username has already been set for this user\n");
 		}
 		//check username starts with an alpha char
 		if (!isalpha(buff[5])) {
-			return sendError(sender,"Error: username must start with an alphabetic character\n");
+			return sendMessage(sender,"Error: username must start with an alphabetic character\n");
 		}
 		//check username contains only alpha, num, and space
 		for (int i = 6; i < amntRead; ++i) {
 			if (!(isalnum(buff[i]) || buff[i] == ' ')) {
-				return sendError(sender,"Error: username may only contain alphanumeric characters and spaces\n");
+				return sendMessage(sender,"Error: username may only contain alphanumeric characters and spaces\n");
 			}
 		}
 		//username is legal! set it
 		sender->nickname = malloc(amntRead-5);
 		strcpy(sender->nickname,buff+5);
-		return;
+		//let the user know they're all good
+		snprintf(buff,BUFFSIZE-1,"Welcome, %s\n",sender->nickname);
+		return sendMessage(sender, buff);	
 	}
 
 	//handle LIST command
@@ -148,11 +149,12 @@ void handleClientMessage(struct client* sender) {
 
 	//handle QUIT command
 	if (amntRead >= 5 && strncmp(buff,"QUIT ",5) == 0) {
+		removeClient(senderNode);
 		return;
 	}
 
 	//unrecognized command
-	sendError(sender, "Error: unrecognized command");
+	sendMessage(sender, "Error: unrecognized command\n");
 
 }
 
@@ -160,34 +162,45 @@ int main(int argc, char** argv)
 {
 	struct sockaddr_in servaddr;
 	int connectionSocket = initializeListenerSocket(&servaddr);
-	
+
+	clients = malloc(sizeof(struct linkedList));
+	ll_init(clients);
+	channels = malloc(sizeof(struct linkedList));
+	ll_init(channels);
+
 	while (true)
 	{
 		// Select on client ports and the listener port
 		fd_set rfds;
 		FD_ZERO(&rfds);
 		int maxPort = connectionSocket;
-		for (struct client* client = cliHead; client != NULL; client = client->next)
+		for (struct node* node = clients->head; node != NULL; node = node->next)
 		{
+			struct client* client = (struct client*)(node->data);
 			FD_SET(client -> socket, &rfds);
 			maxPort = fmax(client -> socket, maxPort);
 		}
 		FD_SET(connectionSocket, &rfds);
 		select(maxPort+1, &rfds, NULL, NULL, NULL);
 
+		//check if the incoming connection socket received anything
 		if (FD_ISSET(connectionSocket, &rfds)) {
 			acceptClient(&servaddr, connectionSocket);
 		}
-		for (struct client* client = cliHead; client != NULL;) {
+		//check if any client sockets received anything
+		for (struct node* node = clients->head; node != NULL;) {
+			struct client* client = (struct client*)(node->data);
 			printf("%d\n",client->socket);
 			//store client's next now, because we won't be able to access it if client gets freed
-			struct client* oldNext = client->next;
+			struct node* oldNext = node->next;
 			if (client->socket != -1 && FD_ISSET(client->socket, &rfds))
-				handleClientMessage(client);
+				handleClientMessage(node);
 			//iterate to old next after potential free
-			client = oldNext;
+			node = oldNext;
 		}
 	}
+	free(clients);
+	free(channels);
 
 	//close(connectionSocket);
 }

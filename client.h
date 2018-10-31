@@ -9,11 +9,12 @@
 #include <time.h>
 #include <sys/types.h>
 #include <stdarg.h>
+#include "linkedList.h"
 
-extern int numChannels;
-extern int numClients;
-extern struct client* cliHead;
-extern struct client* cliTail;
+#ifndef _CLIENT_GUARD
+#define _CLIENT_GUARD
+
+extern struct linkedList* clients;
 
 struct client
 {
@@ -28,65 +29,35 @@ accept an incoming connection request from a client
 @param servaddr: the server address socket
 @param clients: the array of client structs
 @param connection_socket: the socket on which we are ready to receive the incoming client connection
+@returns: a pointer to the node in clients which contains the new client data 
 */
-void acceptClient(struct sockaddr_in* servaddr, int connection_socket) {
+struct node* acceptClient(struct sockaddr_in* servaddr, int connection_socket) {
 	unsigned int len = sizeof(struct sockaddr_in);
 	struct client *newCli = NULL;
 	newCli = malloc(sizeof(struct client));
-	newCli->next = NULL;
-	newCli->prev = NULL;
 	newCli->nickname = NULL;
-
 	newCli->socket = accept(connection_socket, (struct sockaddr *) servaddr, &len);
 	if (newCli->socket < 0) {
 		printf("Error: accept() failed");
 		exit(EXIT_FAILURE);
 	}
 	puts("sender connected");
-	if (numClients == 0) {
-		cliHead = newCli;
-		cliTail = newCli;
-	}
-	else {
-		cliTail->next = newCli;
-		newCli->prev = cliTail;
-		cliTail = newCli;
-	}
-	++numClients;
+	return ll_add(clients,(void*)newCli);
 }
 
 /**
 remove a client, updating the linked list and closing his socket
-@param client: the client to remove
+@param cliNode: the node pointer containing the client to remove
 */
-void removeClient(struct client* client) {
+void removeClient(struct node* cliNode) {
+	struct client* client = (struct client*)(cliNode->data);
 	close(client->socket);
 	client->socket = -1;
-	--numClients;
-	//standard case: client is somewhere in the middle, so update prev->next and next->prev and move on
-	if (client != cliTail && client != cliHead) {
-		client->prev->next = client->next;
-		client->next->prev = client->prev;
-	}
-	//special case: client is the only one, so head and tail should both be set to NULL
-	else if (client == cliHead && client == cliTail) {
-		cliHead = cliTail = NULL;
-	}
-	//special case: client is the head, buth others exist. update next->prev
-	else if (client == cliHead) {
-		client->next->prev = NULL;
-		cliHead = client->next;
-	}
-
-	//special case: client is the tail, but others exist. update prev->next
-	else if (client == cliTail) {
-		client->prev->next = NULL;
-		cliTail = client->prev;
-	}
-	printf("%p,%p\n",cliHead,cliTail);
+	ll_remove(clients,cliNode);
 	//free the client's nickname if it has been set
 	if (client->nickname != NULL) {
 		free(client->nickname);
 	}
 	free(client);
 }
+#endif
