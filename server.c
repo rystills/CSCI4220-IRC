@@ -15,7 +15,6 @@
 
 #define BUFFSIZE 2048
 
-int numChannels = 0;
 struct linkedList* clients;
 struct linkedList* channels;
 
@@ -75,9 +74,10 @@ check whether or not the specified string matches our requriements (20 character
 @param buff: the buffer containing the string to check
 @param amntRead: the total length of meaningful data in the buffer
 @param sender: the client who messaged us this string
+@param shouldNotifySender: whether to alert the sender if an invalid string was provided (true) or not (false)
 @returns: whether the string is valid (true) or not (false)
 */
-bool checkValidString(int sLoc, char* buff, int amntRead, struct client* sender) {
+bool checkValidString(int sLoc, char* buff, int amntRead, struct client* sender, bool shouldNotifySender) {
 	//check string is a valid length
 	if (amntRead > 20+sLoc) {
 		sendMessage(sender,"Error: provided string too long. Max length = 20 chars\n");
@@ -91,7 +91,7 @@ bool checkValidString(int sLoc, char* buff, int amntRead, struct client* sender)
 	//check string contains only alpha, num, and space
 	for (int i = sLoc+1; i < amntRead; ++i) {
 		if (!(isalnum(buff[i]) || buff[i] == ' ')) {
-			sendMessage(sender,"Error: provided string must only contain alphanumeric characters and spaces\n");
+			if (shouldNotifySender) sendMessage(sender,"Error: provided string must only contain alphanumeric characters and spaces\n");
 			return false;
 		}
 	}
@@ -154,7 +154,7 @@ void handleClientMessage(struct node* senderNode) {
 			return sendMessage(sender,"Error: username has already been set for this user\n");
 		}
 		//check that the username is a valid string
-		if (!checkValidString(5,buff,amntRead,sender)) return;
+		if (!checkValidString(5,buff,amntRead,sender,true)) return;
 		//check that username isn't in use by someone else
 		if (findClientWithName(buff+5) != NULL) {
 			return sendMessage(sender,"Error: username is already taken by someone else\n");
@@ -171,6 +171,24 @@ void handleClientMessage(struct node* senderNode) {
 
 	//handle LIST command
 	if (amntRead >= 4 && strncmp(buff,"LIST",4) == 0) {
+		char outBuff[BUFFSIZE];
+		//check if a channel was specified
+		if (amntRead >= 6 && buff[5] == '#' && checkValidString(6,buff,amntRead,sender,false)) {
+			//valid channel name was specified; check if the channel with that name exists
+			//TODO: channel matching specified name detected; list contents of channel instead
+			return;
+		}
+		//no valid channel was specified, so list channels
+		sprintf(outBuff,"There are currently ");
+		sprintf(outBuff+strlen(outBuff),"%d",channels->numElements);
+		sprintf(outBuff+strlen(outBuff)," channels.");
+		for (struct node* node = channels->head; node != NULL; node = node->next) {
+			struct channel* channel = node->data;
+			sprintf(outBuff+strlen(outBuff),"\n* ");
+			sprintf(outBuff+strlen(outBuff),"%s",channel->name);
+		}
+		sprintf(outBuff+strlen(outBuff),"\n");
+		sendMessage(sender,outBuff);		
 		return;
 	}
 
@@ -180,7 +198,7 @@ void handleClientMessage(struct node* senderNode) {
 		if (buff[5] != '#') {
 			return sendMessage(sender,"Error: channel name must begin with '#'\n");
 		}
-		if (!checkValidString(6,buff,amntRead,sender)) return;
+		if (!checkValidString(6,buff,amntRead,sender,true)) return;
 		struct node* channelNode = joinChannel(sender,buff+6);
 		//if we got a return value of NULL, that means we're already present in the channel
 		if (channelNode == NULL) {
