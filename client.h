@@ -23,6 +23,35 @@ struct client
 };
 
 /**
+check whether or not the specified client has set his nickname
+@param sender: the client whose nickname we wish to check
+@returns: whether sender set his nickname (true) or not (false)
+*/
+bool checkNameSet(struct client* sender) {
+	char* outMsg = "Invalid command, please identify yourself with USER.\n";
+	if (sender->nickname == NULL) {
+		send(sender->socket, outMsg, strlen(outMsg), 0);
+		return false;
+	}
+	return true;
+}
+
+/**
+finds the client with the specified username
+@param name: the name of the client we wish to find
+@returns: the client with the specified name if located, else NULL
+*/ 
+struct client* findClientWithName(char* name) {
+	for (struct node* node = clients->head; node != NULL; node = node->next) {
+		struct client* client = node->data;
+		if (client->nickname != NULL && strcmp(client->nickname,name) == 0) {
+			return client;
+		}
+	}
+	return NULL;
+}
+
+/**
 accept an incoming connection request from a client
 @param servaddr: the server address socket
 @param clients: the array of client structs

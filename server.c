@@ -99,34 +99,6 @@ bool checkValidString(int sLoc, char* buff, int amntRead, struct client* sender,
 }
 
 /**
-check whether or not the specified client has set his nickname
-@param sender: the client whose nickname we wish to check
-@returns: whether sender set his nickname (true) or not (false)
-*/
-bool checkNameSet(struct client* sender) {
-	if (sender->nickname == NULL) {
-		sendMessage(sender,"Invalid command, please identify yourself with USER.\n");
-		return false;
-	}
-	return true;
-}
-
-/**
-finds the client with the specified username
-@param name: the name of the client we wish to find
-@returns: the client with the specified name if located, else NULL
-*/ 
-struct client* findClientWithName(char* name) {
-	for (struct node* node = clients->head; node != NULL; node = node->next) {
-		struct client* client = node->data;
-		if (client->nickname != NULL && strcmp(client->nickname,name) == 0) {
-			return client;
-		}
-	}
-	return NULL;
-}
-
-/**
 handle a message received on a client socket
 @param senderNode: the node containing a reference to the client from whom we received a message
 */
