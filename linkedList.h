@@ -13,6 +13,9 @@
 #ifndef _LINKEDLIST_GUARD
 #define _LINKEDLIST_GUARD
 
+/**
+linkedList consists of a head, a tail, and an element counter
+*/
 struct linkedList
 {
 	struct node* head;
@@ -20,6 +23,9 @@ struct linkedList
 	int numElements;
 };
 
+/**
+simple bi-directional node for linkedList
+*/
 struct node
 {
 	struct node* next;
@@ -27,12 +33,22 @@ struct node
 	void* data;
 };
 
+/**
+initialize a new linkedList
+@param list: the linkedList to initialize
+*/
 void ll_init(struct linkedList* list) {
 	list->numElements = 0;
 	list->head = NULL;
 	list->tail = NULL;
 }
 
+/**
+add a node to the specified linkedList
+@param list: the list to which to add the node
+@param data: the data to be contained within the linkedList node
+@returns: a pointer to the newly allocated node containing the passed-in data
+*/
 struct node* ll_add(struct linkedList* list, void* data) {
 	struct node* node = malloc(sizeof(struct node));
 	node->next = NULL;
@@ -51,6 +67,11 @@ struct node* ll_add(struct linkedList* list, void* data) {
 	return node;
 }
 
+/**
+remove a node from the specified linkedList
+@param list: the list from which to remove the node
+@param node: the node to remove
+*/
 void ll_remove(struct linkedList* list, struct node* node) {
 	//standard case: node is somewhere in the middle, so update prev->next and next->prev and move on
 	if (node != list->tail && node != list->head) {
