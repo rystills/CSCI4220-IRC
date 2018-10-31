@@ -148,7 +148,7 @@ void handleClientMessage(struct node* senderNode) {
 	}
 
 	//handle QUIT command
-	if (amntRead >= 5 && strncmp(buff,"QUIT ",5) == 0) {
+	if (amntRead >= 4 && strncmp(buff,"QUIT",4) == 0) {
 		removeClient(senderNode);
 		return;
 	}
