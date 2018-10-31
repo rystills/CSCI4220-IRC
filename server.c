@@ -11,6 +11,7 @@
 #include "linkedList.h"
 //#include "commands.h"
 #include "client.h"
+#include "channel.h"
 
 #define BUFFSIZE 2048
 
@@ -69,12 +70,54 @@ void sendMessage(struct client* cli, char* outMsg) {
 }
 
 /**
+check whether or not the specified string matches our requriements (20 characters, regexp [a-zA-Z][_0-9a-zA-Z]*)
+@param sLoc: the starting location of the string in the specified buffer
+@param buff: the buffer containing the string to check
+@param amntRead: the total length of meaningful data in the buffer
+@param sender: the client who messaged us this string
+@returns: whether the string is valid (true) or not (false)
+*/
+bool checkValidString(int sLoc, char* buff, int amntRead, struct client* sender) {
+	//check string is a valid length
+	if (amntRead > 20+sLoc) {
+		sendMessage(sender,"Error: provided string too long. Max length = 20 chars\n");
+		return false;
+	}
+	//check string starts with an alpha char
+	if (!isalpha(buff[sLoc])) {
+		sendMessage(sender,"Error: provided string must start with an alphabetic character\n");
+		return false;
+	}
+	//check string contains only alpha, num, and space
+	for (int i = sLoc+1; i < amntRead; ++i) {
+		if (!(isalnum(buff[i]) || buff[i] == ' ')) {
+			sendMessage(sender,"Error: provided string must only contain alphanumeric characters and spaces\n");
+			return false;
+		}
+	}
+	return true;
+}
+
+/**
+check whether or not the specified client has set his nickname
+@param sender: the client whose nickname we wish to check
+@returns: whether sender set his nickname (true) or not (false)
+*/
+bool checkNameSet(struct client* sender) {
+	if (sender->nickname == NULL) {
+		sendMessage(sender,"Invalid command, please identify yourself with USER.\n");
+		return false;
+	}
+	return true;
+}
+
+/**
 handle a message received on a client socket
 @param senderNode: the node containing a reference to the client from whom we received a message
 */
 void handleClientMessage(struct node* senderNode) {
 	//dereference the client pointer from our clients node first thing
-	struct client* sender = (struct client*)(senderNode->data);
+	struct client* sender = senderNode->data;
 	char buff[BUFFSIZE];
 	//remove client if we get a read value of 0
 	ssize_t amntRead = read(sender->socket,buff,BUFFSIZE-1);
@@ -91,31 +134,21 @@ void handleClientMessage(struct node* senderNode) {
 	}
 	//handle USER command
 	if (amntRead >= 5 && strncmp(buff,"USER ",5) == 0) {
-		//check username is a valid length
-		if (amntRead > 25) {
-			return sendMessage(sender,"Error: username too long. Max username length = 20 chars\n");
-		}
 		//check username isn't already set
 		if (sender->nickname != NULL) {
 			return sendMessage(sender,"Error: username has already been set for this user\n");
 		}
-		//check username starts with an alpha char
-		if (!isalpha(buff[5])) {
-			return sendMessage(sender,"Error: username must start with an alphabetic character\n");
-		}
-		//check username contains only alpha, num, and space
-		for (int i = 6; i < amntRead; ++i) {
-			if (!(isalnum(buff[i]) || buff[i] == ' ')) {
-				return sendMessage(sender,"Error: username may only contain alphanumeric characters and spaces\n");
-			}
-		}
-		//username is legal! set it
+		//check that the username is a valid string
+		if (!checkValidString(5,buff,amntRead,sender)) return;
 		sender->nickname = malloc(amntRead-5);
 		strcpy(sender->nickname,buff+5);
 		//let the user know they're all good
 		snprintf(buff,BUFFSIZE-1,"Welcome, %s\n",sender->nickname);
 		return sendMessage(sender, buff);	
 	}
+
+	//make sure the username is set before continuing on
+	if (!checkNameSet(sender)) return;
 
 	//handle LIST command
 	if (amntRead >= 5 && strncmp(buff,"LIST ",5) == 0) {
@@ -124,6 +157,14 @@ void handleClientMessage(struct node* senderNode) {
 
 	//handle JOIN command
 	if (amntRead >= 5 && strncmp(buff,"JOIN ",5) == 0) {
+		//check that the channel name is a valid string starting with #
+		if (buff[5] != '#') {
+			return sendMessage(sender,"Error: channel name must begin with '#'\n");
+		}
+		if (!checkValidString(6,buff,amntRead,sender)) return;
+		//check if the channel exists
+		struct node* channelNode = joinChannel(sender,buff+6);
+		//TODO: say hello to everyone in the channel (excluding ourself)
 		return;
 	}
 
@@ -149,12 +190,13 @@ void handleClientMessage(struct node* senderNode) {
 
 	//handle QUIT command
 	if (amntRead >= 4 && strncmp(buff,"QUIT",4) == 0) {
+		//TODO: remove the user from all channels
 		removeClient(senderNode);
 		return;
 	}
 
 	//unrecognized command
-	sendMessage(sender, "Error: unrecognized command\n");
+	sendMessage(sender, "Invalid command.\n");
 
 }
 
@@ -176,7 +218,7 @@ int main(int argc, char** argv)
 		int maxPort = connectionSocket;
 		for (struct node* node = clients->head; node != NULL; node = node->next)
 		{
-			struct client* client = (struct client*)(node->data);
+			struct client* client = node->data;
 			FD_SET(client -> socket, &rfds);
 			maxPort = fmax(client -> socket, maxPort);
 		}
@@ -189,7 +231,7 @@ int main(int argc, char** argv)
 		}
 		//check if any client sockets received anything
 		for (struct node* node = clients->head; node != NULL;) {
-			struct client* client = (struct client*)(node->data);
+			struct client* client = node->data;
 			printf("%d\n",client->socket);
 			//store client's next now, because we won't be able to access it if client gets freed
 			struct node* oldNext = node->next;

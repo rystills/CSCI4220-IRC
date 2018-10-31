@@ -20,8 +20,6 @@ struct client
 {
 	char* nickname;
 	int socket;
-	struct client* next;
-	struct client* prev;
 };
 
 /**
@@ -50,7 +48,7 @@ remove a client, updating the linked list and closing his socket
 @param cliNode: the node pointer containing the client to remove
 */
 void removeClient(struct node* cliNode) {
-	struct client* client = (struct client*)(cliNode->data);
+	struct client* client = cliNode->data;
 	close(client->socket);
 	client->socket = -1;
 	ll_remove(clients,cliNode);
@@ -59,5 +57,6 @@ void removeClient(struct node* cliNode) {
 		free(client->nickname);
 	}
 	free(client);
+	puts("sender disconnected");
 }
 #endif
