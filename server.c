@@ -112,6 +112,21 @@ bool checkNameSet(struct client* sender) {
 }
 
 /**
+finds the client with the specified username
+@param name: the name of the client we wish to find
+@returns: the client with the specified name if located, else NULL
+*/ 
+struct client* findClientWithName(char* name) {
+	for (struct node* node = clients->head; node != NULL; node = node->next) {
+		struct client* client = node->data;
+		if (client->nickname != NULL && strcmp(client->nickname,name) == 0) {
+			return client;
+		}
+	}
+	return NULL;
+}
+
+/**
 handle a message received on a client socket
 @param senderNode: the node containing a reference to the client from whom we received a message
 */
@@ -140,6 +155,9 @@ void handleClientMessage(struct node* senderNode) {
 		}
 		//check that the username is a valid string
 		if (!checkValidString(5,buff,amntRead,sender)) return;
+		if (findClientWithName(buff+5) != NULL) {
+			return sendMessage(sender,"Error: username is already taken by someone else\n");
+		}
 		sender->nickname = malloc(amntRead-5);
 		strcpy(sender->nickname,buff+5);
 		//let the user know they're all good
@@ -151,7 +169,7 @@ void handleClientMessage(struct node* senderNode) {
 	if (!checkNameSet(sender)) return;
 
 	//handle LIST command
-	if (amntRead >= 5 && strncmp(buff,"LIST ",5) == 0) {
+	if (amntRead >= 4 && strncmp(buff,"LIST",4) == 0) {
 		return;
 	}
 
