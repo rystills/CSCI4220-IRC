@@ -93,7 +93,6 @@ void ll_remove(struct linkedList* list, struct node* node) {
 		node->prev->next = NULL;
 		list->tail = node->prev;
 	}
-	printf("%p,%p\n",list->head,list->tail);
 	list->numElements--;
 	free(node);
 }

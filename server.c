@@ -113,8 +113,6 @@ void handleClientMessage(struct node* senderNode) {
 	ssize_t amntRead = read(sender->socket,buff,BUFFSIZE-1);
 	buff[amntRead] = '\0';
 	if (amntRead == 0) {
-		puts("sender disconnected");
-		//printf("%s (socket %d) has disconnected\n", sender->name, sender->socket);
 		return removeClient(senderNode);
 	}
 	//strip trailing newline when present
@@ -368,7 +366,6 @@ int main(int argc, char** argv)
 		//check if any client sockets received anything
 		for (struct node* node = clients->head; node != NULL;) {
 			struct client* client = node->data;
-			printf("%d\n",client->socket);
 			//store client's next now, because we won't be able to access it if client gets freed
 			struct node* oldNext = node->next;
 			if (client->socket != -1 && FD_ISSET(client->socket, &rfds))
