@@ -110,6 +110,7 @@ void handleClientMessage(struct node* senderNode) {
 	struct client* sender = senderNode->data;
 	char buff[BUFFSIZE];
 	//remove client if we get a read value of 0
+	memset(buff,'\0',sizeof(buff));
 	ssize_t amntRead = read(sender->socket,buff,BUFFSIZE-1);
 	buff[amntRead] = '\0';
 	if (amntRead == 0) {
@@ -299,6 +300,37 @@ void handleClientMessage(struct node* senderNode) {
 
 	//handle PRIVMSG command
 	if (amntRead >= 8 && strncmp(buff,"PRIVMSG ",8) == 0) {
+		//verify channel name
+		if (buff[8] != '#') {
+			return sendMessage(sender,"Error: channel name must start with a '#'\n");
+		}
+		if (!checkValidString(9,buff,amntRead,sender,true,true)) return;
+		char channelName[21];
+		//set channel name
+		int spaceInd = 8;
+		while (buff[spaceInd] != ' ' && spaceInd < amntRead) {
+			++spaceInd;
+		}
+		if (spaceInd == amntRead) {
+			return sendMessage(sender,"Error: no channel to message specified\n");
+		}
+		strncpy(channelName,buff+9,spaceInd-9);
+		channelName[spaceInd-9] = '\0';
+		
+		if (amntRead - spaceInd - 1 > 512) {
+			return sendMessage(sender,"Error: message length may not exceed 512 chars\n");
+		}
+
+		//check if channel exists
+		struct channel* channel = findChannel(channelName);
+		if (channel == NULL) {
+			return sendMessage(sender,"Error: channel not found\n");
+		}
+
+		//channel matching specified name detected; send message to all channel members
+		char outBuff[BUFFSIZE];
+		sprintf(outBuff,"#%s> %s: %s\n",channel->name,sender->nickname,buff+spaceInd+1);
+		sendToChannelMembers(outBuff,channel,NULL);
 		return;
 	}
 
