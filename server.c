@@ -76,9 +76,10 @@ check whether or not the specified string matches our requriements (20 character
 @param amntRead: the total length of meaningful data in the buffer
 @param sender: the client who messaged us this string
 @param shouldNotifySender: whether to alert the sender if an invalid string was provided (true) or not (false)
+@param stopAtSpace: wether we should stop upon reaching a space (true) or keep reading (false)
 @returns: whether the string is valid (true) or not (false)
 */
-bool checkValidString(int sLoc, char* buff, int amntRead, struct client* sender, bool shouldNotifySender) {
+bool checkValidString(int sLoc, char* buff, int amntRead, struct client* sender, bool shouldNotifySender, bool stopAtSpace) {
 	//check string is a valid length
 	if (amntRead > 20+sLoc) {
 		if (shouldNotifySender) sendMessage(sender,"Error: provided string too long. Max length = 20 chars\n");
@@ -91,8 +92,9 @@ bool checkValidString(int sLoc, char* buff, int amntRead, struct client* sender,
 	}
 	//check string contains only alpha, num, and space
 	for (int i = sLoc+1; i < amntRead; ++i) {
-		if (!(isalnum(buff[i]) || buff[i] == ' ')) {
-			if (shouldNotifySender) sendMessage(sender,"Error: provided string must only contain alphanumeric characters and spaces\n");
+		if (!(isalnum(buff[i]) || buff[i] == '_')) {
+			if (stopAtSpace && (buff[i] == ' ')) break;
+			if (shouldNotifySender) sendMessage(sender,"Error: provided string must only contain alphanumeric characters and underscores\n");
 			return false;
 		}
 	}
@@ -127,7 +129,7 @@ void handleClientMessage(struct node* senderNode) {
 			return sendMessage(sender,"Error: username has already been set for this user\n");
 		}
 		//check that the username is a valid string
-		if (!checkValidString(5,buff,amntRead,sender,true)) return;
+		if (!checkValidString(5,buff,amntRead,sender,true,false)) return;
 		//check that username isn't in use by someone else
 		if (findClientWithName(buff+5) != NULL) {
 			return sendMessage(sender,"Error: username is already taken by someone else\n");
@@ -149,7 +151,7 @@ void handleClientMessage(struct node* senderNode) {
 		}
 		char outBuff[BUFFSIZE];
 		//check if a valid channel was specified
-		if (amntRead >= 6 && buff[5] == '#' && checkValidString(6,buff,amntRead,sender,false)) {
+		if (amntRead >= 6 && buff[5] == '#' && checkValidString(6,buff,amntRead,sender,false,false)) {
 			//valid channel name was specified; check if the channel with that name exists
 			struct channel* foundChannel = findChannel(buff+6);
 			if (foundChannel != NULL) {
@@ -178,7 +180,7 @@ void handleClientMessage(struct node* senderNode) {
 		if (buff[5] != '#') {
 			return sendMessage(sender,"Error: channel name must begin with '#'.\n");
 		}
-		if (!checkValidString(6,buff,amntRead,sender,true)) return;
+		if (!checkValidString(6,buff,amntRead,sender,true,false)) return;
 		struct node* channelNode = joinChannel(sender,buff+6);
 		//if we got a return value of NULL, that means we're already present in the channel
 		if (channelNode == NULL) {
@@ -202,7 +204,7 @@ void handleClientMessage(struct node* senderNode) {
 		}
 		char outBuff[BUFFSIZE];
 		//check if a valid channel was specified
-		if (amntRead >= 6 && buff[5] == '#' && checkValidString(6,buff,amntRead,sender,false)) {
+		if (amntRead >= 6 && buff[5] == '#' && checkValidString(6,buff,amntRead,sender,false,false)) {
 			//valid channel name was specified; check if the channel with that name exists
 			struct channel* channel = findChannel(buff+6);
 			if (channel != NULL) {
@@ -240,7 +242,7 @@ void handleClientMessage(struct node* senderNode) {
 	//handle OPERATOR command
 	if (amntRead >= 9 && strncmp(buff,"OPERATOR ",5) == 0) {
 		//check that the password is a valid string
-		if (!checkValidString(9,buff,amntRead,sender,true)) return;
+		if (!checkValidString(9,buff,amntRead,sender,true,false)) return;
 		//check if there is a password and the password is correct
 		if (password[0] != '\0' && strcmp(buff+9,password) == 0) {
 			sender->isOperator = true;
@@ -251,6 +253,49 @@ void handleClientMessage(struct node* senderNode) {
 
 	//handle KICK command
 	if (amntRead >= 5 && strncmp(buff,"KICK ",5) == 0) {
+		//must be an operator to kick
+		if (!sender->isOperator) {
+			return sendMessage(sender,"Error: cannot kick if not OPERATOR\n");
+		}
+		//verify channel name
+		if (buff[5] != '#') {
+			return sendMessage(sender,"Error: channel name must start with a '#'\n");
+		}
+		if (!checkValidString(6,buff,amntRead,sender,true,true)) return;
+		char channelName[21];
+		//set channel name
+		int spaceInd = 5;
+		while (buff[spaceInd] != ' ' && spaceInd < amntRead) {
+			++spaceInd;
+		}
+		if (spaceInd == amntRead) {
+			return sendMessage(sender,"Error: no user to kick specified\n");
+		}
+		strncpy(channelName,buff+6,spaceInd-6);
+		channelName[spaceInd-6] = '\0';
+		
+		//verify user name
+		if (!checkValidString(spaceInd+1,buff,amntRead,sender,true,false)) return;
+		//set user name
+		char userName[21];
+		memset(userName,'\0',sizeof(userName));
+		strcpy(userName,buff+spaceInd+1);
+		
+		//check if channel exists
+		struct channel* channel = findChannel(channelName);
+		if (channel == NULL) {
+			return sendMessage(sender,"Error: channel not found\n");
+		}
+		//channel matching specified name detected; check if kick user is present in it
+		struct node* cliNode = clientNameInChannel(channel,userName);
+		if (cliNode == NULL) {
+			return sendMessage(sender,"Error: client not found in channel\n");
+		}
+		//client found in channel; kick him
+		char outBuff[BUFFSIZE];
+		sprintf(outBuff,"#%s> %s has been kicked from the channel.\n",channel->name,userName);
+		sendToChannelMembers(outBuff,channel,NULL);
+		ll_remove(channel->clients,cliNode);
 		return;
 	}
 
@@ -289,7 +334,7 @@ int main(int argc, char** argv)
 	//set password to argv[1] if valid expression
 	if (argc > 1) {
 		int argLen = strlen(argv[1]);
-		if (argLen > 11 && strncmp(argv[1],"--opt-pass=",11) == 0 && checkValidString(11,argv[1],argLen,NULL,false)) {
+		if (argLen > 11 && strncmp(argv[1],"--opt-pass=",11) == 0 && checkValidString(11,argv[1],argLen,NULL,false,false)) {
 			password = argv[1]+11;
 		}
 	}

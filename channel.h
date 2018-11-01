@@ -40,6 +40,23 @@ struct node* clientInChannel(struct channel* channel, struct client* inClient) {
 }
 
 /**
+check if the client with the specified name is in the specified channel
+@param channel: the channel to check in
+@param inClient: the client to check for presence in the channel
+@returns: the client that is found in inChannel, or NULL if the client is not found
+*/ 
+struct node* clientNameInChannel(struct channel* channel, char* clientName) {
+	struct linkedList* clients = channel->clients;
+	for (struct node* node = clients->head; node != NULL; node = node->next) {
+		struct client* client = node->data;
+		if (strcmp(client->nickname,clientName) == 0) {
+			return node;
+		}
+	}
+	return NULL;
+}
+
+/**
 find the channel with the specified name, if it exists
 @param name: the name of the channel we wish to find
 @returns: the channel with the specified name, or NULL if no such channel is found
