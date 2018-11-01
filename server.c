@@ -114,13 +114,36 @@ void handleClientMessage(struct node* senderNode) {
 	ssize_t amntRead = read(sender->socket,buff,BUFFSIZE-1);
 	buff[amntRead] = '\0';
 	if (amntRead == 0) {
-		return removeClient(senderNode);
+		//treat Ctrl+C as a QUIT command
+		amntRead = 4;
+		sprintf(buff,"QUIT");
 	}
 	//strip trailing newline when present
 	if (buff[amntRead-1] == '\n') {
 		buff[amntRead-1] = '\0';
 		--amntRead;
 	}
+
+	//handle QUIT command
+	if (amntRead == 4 && strncmp(buff,"QUIT",4) == 0) {
+		//remove user from all channels
+		for (struct node* node = channels->head; node != NULL; node = node->next) {
+			struct channel* channel = node->data;
+			struct node* channelCli = clientInChannel(channel,sender);
+			if (channelCli != NULL) {
+				ll_remove(channel->clients,channelCli);
+				//inform all channel members that we've left
+				//TODO: the hw pdf doesn't say we should inform everyone that we left the channel if it happened via QUIT, but this makes the most sense
+				char outBuff[BUFFSIZE];
+				sprintf(outBuff,"#%s> %s has left the channel.\n",channel->name,sender->nickname);
+				sendToChannelMembers(outBuff,channel,sender);
+			}
+		}
+		
+		removeClient(senderNode);
+		return;
+	}
+
 	//handle USER command
 	if (amntRead >= 5 && strncmp(buff,"USER ",5) == 0) {
 		//check username isn't already set
@@ -300,13 +323,11 @@ void handleClientMessage(struct node* senderNode) {
 
 	//handle PRIVMSG command
 	if (amntRead >= 8 && strncmp(buff,"PRIVMSG ",8) == 0) {
-		//verify channel name
-		if (buff[8] != '#') {
-			return sendMessage(sender,"Error: channel name must start with a '#'\n");
-		}
-		if (!checkValidString(9,buff,amntRead,sender,true,true)) return;
-		char channelName[21];
-		//set channel name
+		//verify destination name
+		int isChannel = buff[8] == '#' ? 1 : 0;
+		if (!checkValidString(8+isChannel,buff,amntRead,sender,true,true)) return;
+		char destName[21];
+		//set destination name
 		int spaceInd = 8;
 		while (buff[spaceInd] != ' ' && spaceInd < amntRead) {
 			++spaceInd;
@@ -314,43 +335,40 @@ void handleClientMessage(struct node* senderNode) {
 		if (spaceInd == amntRead) {
 			return sendMessage(sender,"Error: no channel to message specified\n");
 		}
-		strncpy(channelName,buff+9,spaceInd-9);
-		channelName[spaceInd-9] = '\0';
+		strncpy(destName,buff+8+isChannel,spaceInd-(8+isChannel));
+		destName[spaceInd-(8+isChannel)] = '\0';
 		
+		//verify message length
 		if (amntRead - spaceInd - 1 > 512) {
 			return sendMessage(sender,"Error: message length may not exceed 512 chars\n");
 		}
 
-		//check if channel exists
-		struct channel* channel = findChannel(channelName);
-		if (channel == NULL) {
-			return sendMessage(sender,"Error: channel not found\n");
-		}
-
-		//channel matching specified name detected; send message to all channel members
-		char outBuff[BUFFSIZE];
-		sprintf(outBuff,"#%s> %s: %s\n",channel->name,sender->nickname,buff+spaceInd+1);
-		sendToChannelMembers(outBuff,channel,NULL);
-		return;
-	}
-
-	//handle QUIT command
-	if (amntRead == 4 && strncmp(buff,"QUIT",4) == 0) {
-		//remove user from all channels
-		for (struct node* node = channels->head; node != NULL; node = node->next) {
-			struct channel* channel = node->data;
-			struct node* channelCli = clientInChannel(channel,sender);
-			if (channelCli != NULL) {
-				ll_remove(channel->clients,channelCli);
-				//inform all channel members that we've left
-				//TODO: the hw pdf doesn't say we should inform everyone that we left the channel if it happened via QUIT, but this makes the most sense
-				char outBuff[BUFFSIZE];
-				sprintf(outBuff,"#%s> %s has left the channel.\n",channel->name,sender->nickname);
-				sendToChannelMembers(outBuff,channel,sender);
+		if (isChannel) {
+			//check if channel exists
+			struct channel* channel = findChannel(destName);
+			if (channel == NULL) {
+				return sendMessage(sender,"Error: channel not found\n");
 			}
+
+			//channel matching specified name detected; send message to all channel members
+			char outBuff[BUFFSIZE];
+			sprintf(outBuff,"#%s> %s: %s\n",channel->name,sender->nickname,buff+spaceInd+1);
+			sendToChannelMembers(outBuff,channel,NULL);
 		}
-		
-		removeClient(senderNode);
+		else {
+			//check if user exists
+			struct client* user = findClientWithName(destName);
+			if (user == NULL) {
+				return sendMessage(sender,"Error: user not found\n");
+			}
+			//user matching specified name detected; send message to him
+			char outBuff[BUFFSIZE];
+			//TODO: should there be a newline after PRIVMSG to user? hw pdf seems unclear
+			sprintf(outBuff,"<<%s %s\n",sender->nickname,buff+spaceInd+1);
+			sendMessage(user,outBuff);
+			sprintf(outBuff,"%s>> %s\n",user->nickname,buff+spaceInd+1);
+			sendMessage(sender,outBuff);
+		}
 		return;
 	}
 
