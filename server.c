@@ -80,11 +80,6 @@ check whether or not the specified string matches our requriements (20 character
 @returns: whether the string is valid (true) or not (false)
 */
 bool checkValidString(int sLoc, char* buff, int amntRead, struct client* sender, bool shouldNotifySender, bool stopAtSpace) {
-	//check string is a valid length
-	if (amntRead > 20+sLoc) {
-		if (shouldNotifySender) sendMessage(sender,"Error: provided string too long. Max length = 20 chars\n");
-		return false;
-	}
 	//check string starts with an alpha char
 	if (!isalpha(buff[sLoc])) {
 		if (shouldNotifySender) sendMessage(sender,"Error: provided string must start with an alphabetic character\n");
@@ -93,8 +88,15 @@ bool checkValidString(int sLoc, char* buff, int amntRead, struct client* sender,
 	//check string contains only alpha, num, and space
 	for (int i = sLoc+1; i < amntRead; ++i) {
 		if (!(isalnum(buff[i]) || buff[i] == '_')) {
-			if (stopAtSpace && (buff[i] == ' ')) break;
+			if (stopAtSpace && (buff[i] == ' ')) {
+				break;
+			}
 			if (shouldNotifySender) sendMessage(sender,"Error: provided string must only contain alphanumeric characters and underscores\n");
+			return false;
+		}
+		//check string is a valid length
+		if (i == sLoc+20) {
+			if (shouldNotifySender) sendMessage(sender,"Error: provided string too long. Max length = 20 chars\n");
 			return false;
 		}
 	}
