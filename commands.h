@@ -1,4 +1,5 @@
 #include "channel.h"
+#include "linkedList.h"
 
 #ifndef _COMMANDS_GUARD
 #define _COMMANDS_GUARD
@@ -36,16 +37,20 @@ char* stripChannel(char* msg)
 	return ans;
 }
 
-char* stripUser(char* msg)
+char* stripUser(struct linkedList* clients, char* msg)
 {
 	char* ans = strchr(msg, ' ');
 	*ans = '\0';
 	ans++;
 
-	int channelLength = checkAlphanumericLength(msg);
-	if (channelLength == -1 || channelLength > 20)
+	int userLength = checkAlphanumericLength(msg);
+	if (userLength == -1 || userLength > 20)
 		return NULL;
-	return ans;
+	for (struct node* node = clients->head; node != NULL; node = node->next)
+		if (strcmp(((struct client*) node -> data) -> nickname, msg) == 0)
+			return ans;
+	printf("Invalid username\n");
+	return NULL;
 }
 
 struct kick parseKick(char* channel)

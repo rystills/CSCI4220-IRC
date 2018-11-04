@@ -88,9 +88,9 @@ bool checkValidString(int sLoc, char* buff, int amntRead, struct client* sender,
 	}
 	//check string contains only alpha, num, and space
 	for (int i = sLoc+1; i < amntRead; ++i) {
+		if (stopAtSpace && buff[i] == ' ')
+			return true;
 		if (!isalnum(buff[i]) && buff[i] != '_') {
-			if (stopAtSpace && (buff[i] == ' '))
-				return true;
 			if (shouldNotifySender)
 				sendMessage(sender,"Error: provided string must only contain alphanumeric characters and underscores\n");
 			return false;
@@ -187,6 +187,44 @@ bool handleOPERATOR(char* buff, int amntRead, struct client* sender)
 	}
 	sendMessage(sender,"Invalid OPERATOR command.\n");
 	return false;
+}
+
+bool handleKick(char* channelString, struct client* sender)
+{
+	printf("Kick command arguments: \"%s\"\n", channelString);
+	if (!sender->isOperator)
+	{
+		sendMessage(sender,"Error: cannot kick if not OPERATOR\n");
+		return false;
+	}
+	char* userString = stripChannel(channelString);
+	printf("Channel String: \"%s\"\n", channelString);
+	printf("Rest of message: \"%s\"\n", userString);
+	if (userString == NULL)
+	{
+		sendMessage(sender,"Error: channel name must start with a '#'\n");
+		return false;
+	}
+	char* rest = stripUser(clients, userString);
+	printf("User String: \"%s\"\n", userString);
+	if (rest == NULL || strlen(rest) > 0)
+	{
+		sendMessage(sender, "Error: username invalid\n");
+		return false;
+	}
+	struct channel* channel = findChannel(channelString);
+
+	struct node* cliNode = clientNameInChannel(channel,userString);
+	if (cliNode == NULL) {
+		sendMessage(sender,"Error: client not found in channel\n");
+		return false;
+	}
+
+	char outBuff[BUFFSIZE];
+	sprintf(outBuff,"#%s> %s has been kicked from the channel.\n",channel->name,userString);
+	sendToChannelMembers(outBuff,channel,NULL);
+	ll_remove(channel->clients,cliNode);
+	return true;
 }
 
 bool handleKICK(char* buff, int amntRead, struct client* sender)
@@ -365,7 +403,8 @@ void handleClientMessage(struct node* senderNode) {
 	}
 
 	//make sure the username is set before continuing on
-	if (!checkNameSet(sender)) return;
+	if (!checkNameSet(sender))
+		return;
 
 	//handle LIST command
 	if (amntRead >= 4 && strncmp(buff,"LIST",4) == 0) {
@@ -415,7 +454,7 @@ void handleClientMessage(struct node* senderNode) {
 
 	//handle KICK command
 	if (amntRead >= 5 && strncmp(buff,"KICK ",5) == 0) {
-		handleKICK(buff, amntRead, sender);
+		handleKick(buff+5, sender);
 	}
 
 	//handle PRIVMSG command
