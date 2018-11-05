@@ -9,9 +9,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <stdarg.h>
-
 #include "linkedList.h"
-#include "client.h"
 
 #ifndef _CHANNEL_GUARD
 #define _CHANNEL_GUARD
@@ -31,7 +29,8 @@ check if the specified client is in the specified channel
 @returns: the client that is found in inChannel, or NULL if the client is not found
 */ 
 struct node* clientInChannel(struct channel* channel, struct client* inClient) {
-	for (struct node* node = channel->clients->head; node != NULL; node = node->next) {
+	struct linkedList* clients = channel->clients;
+	for (struct node* node = clients->head; node != NULL; node = node->next) {
 		struct client* client = node->data;
 		if (client == inClient) {
 			return node;
@@ -47,7 +46,8 @@ check if the client with the specified name is in the specified channel
 @returns: the client that is found in inChannel, or NULL if the client is not found
 */ 
 struct node* clientNameInChannel(struct channel* channel, char* clientName) {
-	for (struct node* node = channel->clients->head; node != NULL; node = node->next) {
+	struct linkedList* clients = channel->clients;
+	for (struct node* node = clients->head; node != NULL; node = node->next) {
 		struct client* client = node->data;
 		if (strcmp(client->nickname,clientName) == 0) {
 			return node;
