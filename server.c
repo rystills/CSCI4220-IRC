@@ -165,6 +165,11 @@ void handleClientMessage(struct node* senderNode) {
 		return sendMessage(sender, buff);	
 	}
 
+	//special case: USERblah should just say invalid command (attempting to match hw pdf sample output)
+	if (amntRead > 4 && strncmp(buff,"USER",4) ==0) {
+		return sendMessage(sender,"Invalid command.\n");
+	}
+
 	//make sure the username is set before continuing on
 	if (!checkNameSet(sender)) return;
 
@@ -180,11 +185,12 @@ void handleClientMessage(struct node* senderNode) {
 			struct channel* foundChannel = findChannel(buff+6);
 			if (foundChannel != NULL) {
 				//channel matching specified name detected; list contents of that channel instead of channel list
-				sprintf(outBuff,"There are currently %d members.\n",foundChannel->clients->numElements);
+				sprintf(outBuff,"There are currently %d members.\n#%s members:",foundChannel->clients->numElements,foundChannel->name);
 				for (struct node* node = foundChannel->clients->head; node != NULL; node = node->next) {
 					struct client* client = node->data;
-					sprintf(outBuff+strlen(outBuff),"* %s\n",client->nickname);
+					sprintf(outBuff+strlen(outBuff)," %s",client->nickname);
 				}
+				sprintf(outBuff+strlen(outBuff),"\n");
 				return sendMessage(sender,outBuff);
 				
 			}
@@ -429,5 +435,5 @@ int main(int argc, char** argv)
 	free(clients);
 	free(channels);
 
-	//close(connectionSocket);
+	close(connectionSocket);
 }

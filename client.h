@@ -70,7 +70,7 @@ struct node* acceptClient(struct sockaddr_in* servaddr, int connection_socket) {
 		printf("Error: accept() failed");
 		exit(EXIT_FAILURE);
 	}
-	puts("sender connected");
+	//puts("sender connected");
 	return ll_add(clients,newCli);
 }
 
@@ -88,6 +88,6 @@ void removeClient(struct node* cliNode) {
 		free(client->nickname);
 	}
 	free(client);
-	puts("sender disconnected");
+	//puts("sender disconnected");
 }
 #endif

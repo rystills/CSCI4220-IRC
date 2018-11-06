@@ -103,7 +103,7 @@ struct node* joinChannel(struct client* client, char* name) {
 			return node;
 		}
 	}
-	puts("channel not found; creating new channel");
+	//puts("channel not found; creating new channel");
 	struct channel* newChannel = malloc(sizeof(struct channel));
 	newChannel->name = malloc(strlen(name)+1);
 	newChannel->clients = malloc(sizeof(struct linkedList));
